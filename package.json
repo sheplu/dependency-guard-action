@@ -1,0 +1,38 @@
+{
+  "name": "@sheplu/dependency-guard-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub Action wrapper for @sheplu/dependency-guard",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sheplu/dependency-guard-action.git"
+  },
+  "homepage": "https://github.com/sheplu/dependency-guard-action#readme",
+  "bugs": {
+    "url": "https://github.com/sheplu/dependency-guard-action/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.js --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx --test-reporter=spec 'tests/**/*.test.ts'",
+    "test:coverage": "node --test --import tsx --experimental-test-coverage --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test-coverage-exclude='tests/**' --test-coverage-exclude='dist/**' --test-coverage-exclude='src/index.ts' 'tests/**/*.test.ts'",
+    "package": "npm run build && git diff --exit-code dist/"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
+    "oxlint": "^1.66.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

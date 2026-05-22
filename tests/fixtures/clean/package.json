@@ -1,0 +1,7 @@
+{
+  "name": "dependency-guard-action-fixture-clean",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture: empty dependency tree. Expected outcome: policy-passed=true, total=0.",
+  "dependencies": {}
+}

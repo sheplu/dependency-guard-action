@@ -1,0 +1,104 @@
+name: 'Dependency Guard'
+description: 'Scan Node.js dependencies for outdated/deprecated packages with policy enforcement.'
+author: 'sheplu'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  version:
+    description: |
+      Version spec of @sheplu/dependency-guard to run via npx. Accepts any spec
+      npm understands: an exact version ("0.1.0"), a semver range ("^0.1.0"),
+      a dist-tag ("latest", "next"), or a git/file URL. Defaults to "latest"
+      for getting-started ergonomics; pin for reproducible builds.
+    required: false
+    default: 'latest'
+  working-directory:
+    description: 'Directory containing package.json. Ignored if "path" is set.'
+    required: false
+    default: '.'
+  path:
+    description: 'Explicit package.json path. Overrides "working-directory".'
+    required: false
+  format:
+    description: 'Output format printed to the action log: table | json | markdown.'
+    required: false
+    default: 'table'
+  fail-on:
+    description: 'Fail the job if updates are needed at this level: major | minor | patch | any | deprecated.'
+    required: false
+  max-age-days:
+    description: 'Fail if any dependency version is older than N days.'
+    required: false
+  only:
+    description: 'Comma-separated package names to analyze (e.g. "react,lodash").'
+    required: false
+  ignore-scopes:
+    description: 'Comma-separated npm scopes to skip (e.g. "@internal,@private").'
+    required: false
+  filter:
+    description: 'Comma-separated dependency buckets to include: prod, dev, peer, optional, overrides, resolutions, pnpm-overrides.'
+    required: false
+  include-transitive:
+    description: 'Expand analysis via lockfile to include transitive dependencies.'
+    required: false
+    default: 'false'
+  registry:
+    description: 'Custom npm registry URL.'
+    required: false
+  no-cache:
+    description: 'Disable registry response cache.'
+    required: false
+    default: 'false'
+  cache-clear:
+    description: 'Clear the registry cache before running.'
+    required: false
+    default: 'false'
+  cache-ttl:
+    description: 'Cache TTL in minutes.'
+    required: false
+  sort:
+    description: 'Sort by: age | status | name.'
+    required: false
+  all-columns:
+    description: 'Table format: show empty patch/minor/major columns.'
+    required: false
+    default: 'false'
+  update-level:
+    description: 'WARNING: Rewrites package.json. One of: patch | minor | major | all. Pair with dry-run for safety.'
+    required: false
+  dry-run:
+    description: 'Preview --update changes without writing.'
+    required: false
+    default: 'false'
+  quiet:
+    description: 'Suppress summary line in non-JSON formats.'
+    required: false
+    default: 'false'
+  summary:
+    description: 'Write a markdown report to $GITHUB_STEP_SUMMARY.'
+    required: false
+    default: 'true'
+
+outputs:
+  total:
+    description: 'Total dependencies analyzed.'
+  up-to-date:
+    description: 'Count of up-to-date dependencies.'
+  patch-updates:
+    description: 'Count of dependencies needing patch updates.'
+  minor-updates:
+    description: 'Count of dependencies needing minor updates.'
+  major-updates:
+    description: 'Count of dependencies needing major updates.'
+  deprecated:
+    description: 'Count of deprecated dependencies.'
+  policy-passed:
+    description: '"true" if exit code was 0; "false" if --fail-on or --max-age tripped (exit 2).'
+  report-json:
+    description: 'Full JSON report from dependency-guard.'
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

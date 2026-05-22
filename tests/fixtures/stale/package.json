@@ -1,0 +1,9 @@
+{
+  "name": "dependency-guard-action-fixture-stale",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture: deliberately stale deps. Expected outcome: at least one minor or major update available.",
+  "dependencies": {
+    "lodash": "4.17.20"
+  }
+}

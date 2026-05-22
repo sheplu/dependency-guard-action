@@ -80,8 +80,9 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 .output
+# Note: GitHub Actions require the bundled `dist/index.js` to be committed,
+# so we do NOT ignore `dist/` in this repo.
 
 # Gatsby files
 .cache/

@@ -1,0 +1,137 @@
+name: Test action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  clean-repo:
+    name: Happy path on clean fixture
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - id: scan
+        uses: ./
+        with:
+          working-directory: tests/fixtures/clean
+          format: json
+          summary: 'false'
+
+      - name: Assert policy passed and zero deps
+        env:
+          POLICY_PASSED: ${{ steps.scan.outputs.policy-passed }}
+          TOTAL: ${{ steps.scan.outputs.total }}
+        run: |
+          set -euo pipefail
+          if [[ "$POLICY_PASSED" != "true" ]]; then
+            echo "::error::Expected policy-passed=true on clean fixture, got '$POLICY_PASSED'"
+            exit 1
+          fi
+          if [[ "$TOTAL" != "0" ]]; then
+            echo "::error::Expected total=0 on clean fixture, got '$TOTAL'"
+            exit 1
+          fi
+
+  stale-no-policy:
+    name: Stale fixture without policy enforcement
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - id: scan
+        uses: ./
+        with:
+          working-directory: tests/fixtures/stale
+          format: json
+          summary: 'false'
+
+      - name: Assert outputs are populated
+        env:
+          POLICY_PASSED: ${{ steps.scan.outputs.policy-passed }}
+          TOTAL: ${{ steps.scan.outputs.total }}
+          REPORT_JSON: ${{ steps.scan.outputs.report-json }}
+        run: |
+          set -euo pipefail
+          if [[ "$POLICY_PASSED" != "true" ]]; then
+            echo "::error::Expected policy-passed=true (no fail-on set), got '$POLICY_PASSED'"
+            exit 1
+          fi
+          if [[ "$TOTAL" != "1" ]]; then
+            echo "::error::Expected total=1 on stale fixture, got '$TOTAL'"
+            exit 1
+          fi
+          # report-json must be valid JSON containing the lodash dependency
+          echo "$REPORT_JSON" | jq -e '.dependencies[] | select(.name == "lodash")' > /dev/null
+
+  stale-fails-policy:
+    name: Stale fixture trips fail-on=patch (expected to fail)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - id: scan
+        uses: ./
+        continue-on-error: true
+        with:
+          working-directory: tests/fixtures/stale
+          fail-on: patch
+          format: json
+          summary: 'false'
+
+      - name: Assert step failed with policy violation
+        env:
+          STEP_OUTCOME: ${{ steps.scan.outcome }}
+          POLICY_PASSED: ${{ steps.scan.outputs.policy-passed }}
+        run: |
+          set -euo pipefail
+          if [[ "$STEP_OUTCOME" != "failure" ]]; then
+            echo "::error::Expected the action step to fail when fail-on=patch trips, got outcome='$STEP_OUTCOME'"
+            exit 1
+          fi
+          if [[ "$POLICY_PASSED" != "false" ]]; then
+            echo "::error::Expected policy-passed=false on policy violation, got '$POLICY_PASSED'"
+            exit 1
+          fi
+
+  invalid-input:
+    name: Invalid input is rejected up front
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - id: scan
+        uses: ./
+        continue-on-error: true
+        with:
+          format: xml
+          summary: 'false'
+
+      - name: Assert step failed
+        env:
+          STEP_OUTCOME: ${{ steps.scan.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$STEP_OUTCOME" != "failure" ]]; then
+            echo "::error::Expected the action to fail on invalid format, got outcome='$STEP_OUTCOME'"
+            exit 1
+          fi
