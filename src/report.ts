@@ -27,6 +27,20 @@ export type SetOutputFn = (name: string, value: string | number) => void;
 
 export type SummaryWriter = (markdown: string) => Promise<void>;
 
+// Writes the full JSON report somewhere durable and returns the path to it.
+export type ReportFileWriter = (json: string) => string;
+
+export interface OutputDeps {
+  setOutput: SetOutputFn;
+  writeReportFile: ReportFileWriter;
+  warning: (msg: string) => void;
+}
+
+// GitHub caps a single output value at ~1 MB (and job-level outputs enforce it
+// strictly). Above this we skip the inline `report-json` and point users at the
+// `report-path` file instead, rather than emit a silently truncated value.
+export const MAX_INLINE_REPORT_BYTES = 1_000_000;
+
 function countDeprecated(report: AnalysisReport): number {
   if (typeof report.summary.deprecated === 'number') {
     return report.summary.deprecated;
@@ -35,8 +49,10 @@ function countDeprecated(report: AnalysisReport): number {
     .length;
 }
 
-export function setOutputs(opts: PublishOptions, setOutput: SetOutputFn): void {
+export function setOutputs(opts: PublishOptions, deps: OutputDeps): void {
   const { report, exitCode } = opts;
+  const { setOutput, writeReportFile, warning } = deps;
+
   setOutput('total', report.summary.total);
   setOutput('up-to-date', report.summary.upToDate);
   setOutput('patch-updates', report.summary.patchUpdates);
@@ -44,7 +60,26 @@ export function setOutputs(opts: PublishOptions, setOutput: SetOutputFn): void {
   setOutput('major-updates', report.summary.majorUpdates);
   setOutput('deprecated', countDeprecated(report));
   setOutput('policy-passed', exitCode === 0 ? 'true' : 'false');
-  setOutput('report-json', JSON.stringify(report));
+
+  const json = JSON.stringify(report);
+
+  // Always persist the full report to a file so large reports remain available
+  // regardless of the inline-output size cap.
+  const reportPath = writeReportFile(json);
+  setOutput('report-path', reportPath);
+
+  // Only expose the inline JSON when it comfortably fits GitHub's output limit.
+  // Byte length (not string length) is what counts against the cap.
+  const byteLength = Buffer.byteLength(json, 'utf8');
+  if (byteLength <= MAX_INLINE_REPORT_BYTES) {
+    setOutput('report-json', json);
+  } else {
+    setOutput('report-json', '');
+    warning(
+      `report-json omitted: report is ${byteLength} bytes, over the ${MAX_INLINE_REPORT_BYTES}-byte ` +
+        `output limit. Read the full report from the "report-path" output (${reportPath}) instead.`,
+    );
+  }
 }
 
 export async function writeStepSummary(

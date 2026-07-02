@@ -73,12 +73,16 @@ function makeDeps(
   outputs: Map<string, string | number>;
   failed: string[];
   errors: string[];
+  warnings: string[];
+  reportWrites: string[];
   summaryWrites: string[];
 } {
   let execCallIndex = 0;
   const outputs = new Map<string, string | number>();
   const failed: string[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
+  const reportWrites: string[] = [];
   const summaryWrites: string[] = [];
 
   const exec: ExecFn = async (_cmd, _args, options) => {
@@ -103,6 +107,13 @@ function makeDeps(
     error: (msg) => {
       errors.push(msg);
     },
+    warning: (msg) => {
+      warnings.push(msg);
+    },
+    writeReportFile: (json) => {
+      reportWrites.push(json);
+      return '/tmp/dependency-guard-report.json';
+    },
     writeSummary: async (md) => {
       summaryWrites.push(md);
     },
@@ -116,6 +127,8 @@ function makeDeps(
     outputs,
     failed,
     errors,
+    warnings,
+    reportWrites,
     summaryWrites,
   };
 }
@@ -136,6 +149,8 @@ describe('orchestrate', () => {
     assert.equal(ctx.errors.length, 0);
     assert.equal(ctx.outputs.get('total'), 1);
     assert.equal(ctx.outputs.get('policy-passed'), 'true');
+    assert.equal(ctx.outputs.get('report-path'), '/tmp/dependency-guard-report.json');
+    assert.deepEqual(ctx.reportWrites, [JSON.stringify(sampleReport)]);
     assert.deepEqual(ctx.summaryWrites, ['# report\n']);
   });
 
