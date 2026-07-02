@@ -25,14 +25,18 @@
     "package": "npm run build && git diff --exit-code dist/"
   },
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1"
+    "@actions/core": "^3.0.1",
+    "@actions/exec": "^3.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "esbuild": "^0.24.0",
-    "oxlint": "^1.66.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^26.1.0",
+    "esbuild": "^0.28.1",
+    "oxlint": "^1.72.0",
+    "tsx": "^4.22.5",
+    "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true
   }
 }
