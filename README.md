@@ -102,7 +102,8 @@ Combine with `peter-evans/create-pull-request` to open a PR that bumps minor ver
 | `major-updates`  | Count needing major updates.                                                 |
 | `deprecated`     | Count of deprecated dependencies.                                            |
 | `policy-passed`  | `"true"` if exit was 0; `"false"` if `fail-on`/`max-age-days` tripped.       |
-| `report-json`    | Full JSON report from `dependency-guard`.                                    |
+| `report-json`    | Full JSON report, inline. Empty when the report exceeds GitHub's ~1 MB output limit (e.g. large monorepos with `include-transitive`) — read `report-path` instead. |
+| `report-path`    | Filesystem path to the full JSON report. Always set, regardless of size.     |
 
 Use the outputs in downstream steps:
 

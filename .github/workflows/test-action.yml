@@ -62,6 +62,7 @@ jobs:
           POLICY_PASSED: ${{ steps.scan.outputs.policy-passed }}
           TOTAL: ${{ steps.scan.outputs.total }}
           REPORT_JSON: ${{ steps.scan.outputs.report-json }}
+          REPORT_PATH: ${{ steps.scan.outputs.report-path }}
         run: |
           set -euo pipefail
           if [[ "$POLICY_PASSED" != "true" ]]; then
@@ -74,6 +75,12 @@ jobs:
           fi
           # report-json must be valid JSON containing the lodash dependency
           echo "$REPORT_JSON" | jq -e '.dependencies[] | select(.name == "lodash")' > /dev/null
+          # report-path must point at a file holding the same full report
+          if [[ -z "$REPORT_PATH" ]]; then
+            echo "::error::Expected report-path to be set"
+            exit 1
+          fi
+          jq -e '.dependencies[] | select(.name == "lodash")' "$REPORT_PATH" > /dev/null
 
   stale-fails-policy:
     name: Stale fixture trips fail-on=patch (expected to fail)

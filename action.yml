@@ -97,7 +97,11 @@ outputs:
   policy-passed:
     description: '"true" if exit code was 0; "false" if --fail-on or --max-age tripped (exit 2).'
   report-json:
-    description: 'Full JSON report from dependency-guard.'
+    description: |
+      Full JSON report from dependency-guard, inline. Omitted (empty string) when
+      the report exceeds GitHub's ~1 MB output limit; read "report-path" instead.
+  report-path:
+    description: 'Filesystem path to the full JSON report. Always set; use for large reports.'
 
 runs:
   using: 'node24'

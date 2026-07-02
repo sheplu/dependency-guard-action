@@ -4,7 +4,7 @@ import { buildArgs } from './args.ts';
 import { runCli } from './runner.ts';
 import type { ExecFn } from './runner.ts';
 import { classifyExit, parseReport, setOutputs, writeStepSummary } from './report.ts';
-import type { SetOutputFn, SummaryWriter } from './report.ts';
+import type { ReportFileWriter, SetOutputFn, SummaryWriter } from './report.ts';
 
 export interface OrchestrateDeps {
   readInputs: () => Config;
@@ -12,6 +12,8 @@ export interface OrchestrateDeps {
   setOutput: SetOutputFn;
   setFailed: (msg: string) => void;
   error: (msg: string) => void;
+  warning: (msg: string) => void;
+  writeReportFile: ReportFileWriter;
   writeSummary: SummaryWriter;
 }
 
@@ -40,7 +42,14 @@ export async function orchestrate(deps: OrchestrateDeps): Promise<void> {
   }
 
   const report = parseReport(jsonRun.stdout);
-  setOutputs({ report, exitCode: jsonRun.exitCode }, deps.setOutput);
+  setOutputs(
+    { report, exitCode: jsonRun.exitCode },
+    {
+      setOutput: deps.setOutput,
+      writeReportFile: deps.writeReportFile,
+      warning: deps.warning,
+    },
+  );
 
   // Second pass: render the user's preferred format to the action log.
   // We deliberately call the CLI again rather than re-render JSON ourselves,

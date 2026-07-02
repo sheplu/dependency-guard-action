@@ -18751,6 +18751,11 @@ var require_undici = __commonJS({
   }
 });
 
+// src/index.ts
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+
 // node_modules/@actions/core/lib/command.js
 import * as os from "os";
 
@@ -19957,6 +19962,9 @@ function setFailed(message) {
 function error(message, properties = {}) {
   issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
+function warning(message, properties = {}) {
+  issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+}
 
 // src/inputs.ts
 var FORMATS = ["table", "json", "markdown"];
@@ -20116,14 +20124,16 @@ function parseReport(stdout) {
   }
   return JSON.parse(trimmed);
 }
+var MAX_INLINE_REPORT_BYTES = 1e6;
 function countDeprecated(report) {
   if (typeof report.summary.deprecated === "number") {
     return report.summary.deprecated;
   }
   return report.dependencies.filter((d) => d.deprecated !== null && d.deprecated !== void 0).length;
 }
-function setOutputs(opts, setOutput2) {
+function setOutputs(opts, deps) {
   const { report, exitCode } = opts;
+  const { setOutput: setOutput2, writeReportFile, warning: warning2 } = deps;
   setOutput2("total", report.summary.total);
   setOutput2("up-to-date", report.summary.upToDate);
   setOutput2("patch-updates", report.summary.patchUpdates);
@@ -20131,7 +20141,18 @@ function setOutputs(opts, setOutput2) {
   setOutput2("major-updates", report.summary.majorUpdates);
   setOutput2("deprecated", countDeprecated(report));
   setOutput2("policy-passed", exitCode === 0 ? "true" : "false");
-  setOutput2("report-json", JSON.stringify(report));
+  const json = JSON.stringify(report);
+  const reportPath = writeReportFile(json);
+  setOutput2("report-path", reportPath);
+  const byteLength = Buffer.byteLength(json, "utf8");
+  if (byteLength <= MAX_INLINE_REPORT_BYTES) {
+    setOutput2("report-json", json);
+  } else {
+    setOutput2("report-json", "");
+    warning2(
+      `report-json omitted: report is ${byteLength} bytes, over the ${MAX_INLINE_REPORT_BYTES}-byte output limit. Read the full report from the "report-path" output (${reportPath}) instead.`
+    );
+  }
 }
 async function writeStepSummary(markdown, writer) {
   if (markdown.trim() === "") return;
@@ -20159,7 +20180,14 @@ async function orchestrate(deps) {
     return;
   }
   const report = parseReport(jsonRun.stdout);
-  setOutputs({ report, exitCode: jsonRun.exitCode }, deps.setOutput);
+  setOutputs(
+    { report, exitCode: jsonRun.exitCode },
+    {
+      setOutput: deps.setOutput,
+      writeReportFile: deps.writeReportFile,
+      warning: deps.warning
+    }
+  );
   await runCli(
     {
       version: config.version,
@@ -20195,6 +20223,13 @@ orchestrate({
   setOutput: (name, value) => setOutput(name, value),
   setFailed: (m) => setFailed(m),
   error: (m) => error(m),
+  warning: (m) => warning(m),
+  writeReportFile: (json) => {
+    const dir = process.env.RUNNER_TEMP ?? tmpdir();
+    const path4 = join3(dir, "dependency-guard-report.json");
+    writeFileSync(path4, json, "utf8");
+    return path4;
+  },
   writeSummary: async (md) => {
     await summary.addRaw(md).addEOL().write();
   }
